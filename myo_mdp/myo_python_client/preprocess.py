@@ -21,7 +21,11 @@ def get_base(dataPath):
     return baseRot
 
 def process_emg(EMG, EMG_max, EMG_min):
-    EMG = (EMG-EMG_min)/(EMG_max-EMG_min+1)
+    EMG_norm = (EMG-EMG_min)/(EMG_max-EMG_min+1)
+    return EMG_norm
+
+def restore_emg(EMG_norm, EMG_max, EMG_min):
+    EMG = EMG_norm*(EMG_max-EMG_min+1)+EMG_min
     return EMG
 
 def process_gyro(GYRO, GYRO_max=500, discrete=False):

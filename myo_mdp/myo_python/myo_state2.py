@@ -24,6 +24,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 #from logger import MyLogger
 import datetime
+import json
 
 
 TIME_WEIGHT = 0.05
@@ -43,7 +44,7 @@ class MyoPrompt2(MyoDemo2):
         else:
             ending = min(starting+50, len(self.quat_l)-1)
 
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(20)
         for i in range(starting, ending):
             MyoDemo2.pub_l.publish(self.quat_l[i])
             MyoDemo2.pub_u.publish(self.quat_u[i])
@@ -149,7 +150,8 @@ class Progress(object):
         self.pub = rospy.Publisher('/exercise/progress', Float64, queue_size=10)
         self.pub1 = rospy.Publisher('/exercise/state', String, queue_size=10)
         try:
-            threading.Thread(target=self.activatePrompt).start()
+            #threading.Thread(target=self.activatePrompt).start()
+            self.activatePrompt()
         except:
             print "Could not start thread. ", sys.exc_info()[0]
             sys.exit(1)
@@ -296,9 +298,11 @@ class Progress(object):
         print self.progress
         self.prompt_now = True
 
-        if self.progress >= 0:
+        if self.progress >= 0 and self.progress < 1:
             #self.prompt.callback(self.progress, self.progress + 1.0 / (self.n_states - 1))
             self.prompt.callback(self.progress)
+        elif self.progress == 1:
+            print "No need to prompot"
         else:
             print "do not know how to prompt..."
         print "prompt ended"
@@ -310,7 +314,7 @@ class Progress(object):
         self.finished = True
         with open(self.logfile, 'a') as f:
             f.write('{:%Y-%m-%d %H:%M:%S} task completed. '.format(datetime.datetime.now()))
-        self.pub.publish(1.0)
+        #self.pub.publish(1.0)
         try:
             self.evaluate_pfmce()
         except IndexError:
@@ -322,6 +326,7 @@ class Progress(object):
         print "Message received: ", msg.data
         if msg.data == 'stop':
             print "Task terminated by user"
+            self.pub.publish(1.0)
             self.end_game()
         if msg.data == 'help':
             print "Prompt requested by user"
@@ -383,20 +388,9 @@ class Progress(object):
             #f.write( str((diff_emg_l, diff_emg_u, diff_ort_l, diff_ort_u, cost))+'\t' )
             f.write('performance score: %f\n' %performance)
 
-        # for signal in history:
-        #     emg_l = signal[0:8]/EMG_WEIGHT
-        #     emg_u = signal[18:26]/EMG_WEIGHT
-        #     emg = np.hstack((emg_l,emg_u))
-            #actions.append(int(action_classifier.predict(emg)[0]))
-            #states.append(int(self.classifier.predict(signal)[0]))
-        # print actions
-        # print states
-        # result = evaluate(actions, states, self.mdp)
-        # print result
-        # score = 100*math.exp((result-self.baseline)/200)
-        # print "Performance score =", int(score)
-        # np.savetxt('user_data/'+self.user_id, history, delimiter=',')
-        # self.history = []
+        # with open('../log/{:%Y-%m-%d %H:%M:%S} task'.format(datetime.datetime.now())+str(self.task_type)+'.pkl', 'a') as f:
+        #     pickle.dump(preprocess.restore_emg(emg_l,self.EMG_MAX, self.EMG_MIN), f)
+        #     pickle.dump(preprocess.restore_emg(emg_u,self.EMG_MAX, self.EMG_MIN), f)
 
 
 if __name__ == '__main__':
