@@ -29,9 +29,11 @@ TIME_WEIGHT = 0.05
 EMG_WEIGHT = 1
 END = -1
 
+
 class MyoPrompt2(MyoDemo2):
     def __init__(self, task_type=1):
         super(MyoPrompt2, self).__init__(task_type=task_type)
+        self.skip = False
         
     def callback(self, percentage, end=None):
         # print 'prompting range: ', percentage, end
@@ -42,8 +44,14 @@ class MyoPrompt2(MyoDemo2):
         else:
             ending = min(starting+50, len(self.quat_l)-1)
 
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(20)
         for i in range(starting, ending):
+            if self.skip:
+                print "Demonstration skipped"
+                self.skip == False
+                MyoDemo2.pub_l.publish(Quaternion(x=-1337, y=-1337, z=-1337, w=-1337))
+                MyoDemo2.pub_u.publish(Quaternion(x=-1337, y=-1337, z=-1337, w=-1337))
+                return
             MyoDemo2.pub_l.publish(self.quat_l[i])
             MyoDemo2.pub_u.publish(self.quat_u[i])
             counter += 1
@@ -287,9 +295,9 @@ class Progress(object):
             self.recent_state = state
 
             self.delay += 1
-            if len(self.task)>0 and self.delay>500:
-                #self.deliver_prompt()
-                print "stuck"
+#            if len(self.task)>0 and self.delay>500:
+#                #self.deliver_prompt()
+#                print "stuck"
 
     def deliver_prompt(self):
         print "Prompt started..."
@@ -319,13 +327,17 @@ class Progress(object):
             self.reset()
 
     def speech_handler(self, msg):
-        print "Message received: ", msg.data
+        #print "Message received: ", msg.data
         if msg.data == 'stop':
             print "Task terminated by user"
+            self.pub.publish(1.0)  # show ribbon
             self.end_game()
         if msg.data == 'help':
             print "Prompt requested by user"
             self.deliver_prompt()
+
+        if msg.data == 'skip':
+            self.prompt.skip = True
 
     def evaluate_pfmce(self, evaluate_emg=True):
         print "Evaluating performance...."
