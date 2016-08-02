@@ -32,6 +32,8 @@ n_repeats = 0
 nrepeats_pub = rospy.Publisher('/exercise/n_repeats', Int32, queue_size=1)
 
 def signal_handler(msg):
+    """ Speech and button controls share the same handler here"""
+    
     print "signal received", msg
 
     global progress, task, demo, n_repeats
@@ -80,28 +82,32 @@ def signal_handler(msg):
 
     elif msg.data == 100:
         # "Home" command
-        progress.end_game()
+        if demo is not None: 
+            demo.skip = True
+        if progress is not None:
+            progress.end_game()
+        n_repeats = 0
         progress = None
         task = None
         demo = None
         
+    elif msg.data == -2:
+        # skip demonstration
+        if demo is not None:
+            demo.skip = True
+        
 def speech_handler(msg):
     print "Message received: ", msg.data
-    global demo
     
-    # using 10s because single digits are used by other messages.
+    # using 10s because single digits are used by other messages in the trianing interface.
     if msg.data == 'task one':
         signal_handler(Int32(10))
     if msg.data == 'task two':
         signal_handler(Int32(20))
     if msg.data == 'task three':
         signal_handler(Int32(30))
-    if msg.data == 'skip':
-        demo.skip = True
-    if msg.data == 'home':
-        if demo is not None: 
-            demo.skip = True
-        signal_handler(Int32(100))
+
+
 
 if __name__ == '__main__':
     
