@@ -2,12 +2,10 @@
 
 #sudo chmod 777 /dev/ttyACM*
 
-IP=`ifconfig eth0 2>/dev/null|awk '/inet addr:/ {print $2}'|sed 's/addr://'`
+IP=`ifconfig wlan1 2>/dev/null|awk '/inet addr:/ {print $2}'|sed 's/addr://'`
 
-#export ROS_HOSTNAME=$IP
-#export ROS_MASTER_URI=http://$IP:11311
-export ROS_HOSTNAME=10.0.1.3
-export ROS_MASTER_URI=http://10.0.1.3:11311
+export ROS_HOSTNAME=$IP
+export ROS_MASTER_URI=http://$IP:11311
 
 [[ ":$PYTHONPATH:" != *"threespace"* ]] && export PYTHONPATH="${PYTHONPATH}:~/myocp/myo/src/threespace/threespace"
 

@@ -129,6 +129,7 @@ install(PROGRAMS
   scripts/myo_plotter.py
   scripts/myo_demo.py
   scripts/myo_state.py
+  myo_mdp/myo_python_client/prompt2_client.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
