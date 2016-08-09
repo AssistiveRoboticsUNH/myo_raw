@@ -49,7 +49,7 @@ class MyoDemo2(object):
         
         self.quat_l.append(Quaternion(x=-1337, y=-1337, z=-1337, w=-1337))
         self.quat_u.append(Quaternion(x=-1337, y=-1337, z=-1337, w=-1337))
-        print "Done writing!"
+        print "demonstration loaded!"
         
 
     def callback(self, message):
