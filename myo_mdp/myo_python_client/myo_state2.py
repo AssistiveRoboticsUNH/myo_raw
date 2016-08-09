@@ -6,7 +6,7 @@ Created on Mar 25, 2016
 
 import cPickle as pickle
 import rospy
-from std_msgs.msg import String, Float64, Empty
+from std_msgs.msg import String, Float64, Empty, Int32
 from geometry_msgs.msg import Quaternion
 from myo_raw.msg import IMUData, EMGIMU
 import numpy as np
@@ -30,9 +30,11 @@ TIME_WEIGHT = 0.05
 EMG_WEIGHT = 1
 END = -1
 
+
 class MyoPrompt2(MyoDemo2):
     def __init__(self, task_type=1):
         super(MyoPrompt2, self).__init__(task_type=task_type)
+        self.skip = False
         
     def callback(self, percentage, end=None):
         # print 'prompting range: ', percentage, end
@@ -45,6 +47,12 @@ class MyoPrompt2(MyoDemo2):
 
         rate = rospy.Rate(20)
         for i in range(starting, ending):
+            if self.skip:
+                print "Demonstration skipped"
+                self.skip == False
+                MyoDemo2.pub_l.publish(Quaternion(x=-1337, y=-1337, z=-1337, w=-1337))
+                MyoDemo2.pub_u.publish(Quaternion(x=-1337, y=-1337, z=-1337, w=-1337))
+                return
             MyoDemo2.pub_l.publish(self.quat_l[i])
             MyoDemo2.pub_u.publish(self.quat_u[i])
             counter += 1
@@ -148,6 +156,7 @@ class Progress(object):
         self.mdp = kwargs.get('mdp', None)
         self.pub = rospy.Publisher('/exercise/progress', Float64, queue_size=10)
         self.pub1 = rospy.Publisher('/exercise/state', String, queue_size=10)
+        self.score_pub = rospy.Publisher('/exercise/score', Int32, queue_size=1)
         try:
             threading.Thread(target=self.activatePrompt).start()
             #self.activatePrompt()
@@ -288,9 +297,9 @@ class Progress(object):
             self.recent_state = state
 
             self.delay += 1
-            if len(self.task)>0 and self.delay>500:
-                #self.deliver_prompt()
-                print "stuck"
+#            if len(self.task)>0 and self.delay>500:
+#                #self.deliver_prompt()
+#                print "stuck"
 
     def deliver_prompt(self):
         print "Prompt started..."
@@ -322,14 +331,17 @@ class Progress(object):
             self.reset()
 
     def speech_handler(self, msg):
-        print "Message received: ", msg.data
-        if msg.data == 'stop':
-            print "Task terminated by user"
-            self.pub.publish(1.0)
-            self.end_game()
+        #print "Message received: ", msg.data
+#        if msg.data == 'stop':
+#            print "Task terminated by user"
+#            self.pub.publish(1.0)  # show ribbon
+#            self.end_game()
         if msg.data == 'help':
             print "Prompt requested by user"
             self.deliver_prompt()
+
+        if msg.data == 'skip': # to stop helping
+            self.prompt.skip = True
 
     def evaluate_pfmce(self, evaluate_emg=True):
         print "Evaluating performance...."
@@ -382,6 +394,7 @@ class Progress(object):
                                      - TIME_FACTOR*cost) - 8*self.n_prompts
         #self.logger.info('performance score %f' %performance)
         print performance
+        self.score_pub.publish(int(performance))
         with open(self.logfile, 'a') as f:
             #f.write('diff_emg_l, diff_emg_u, diff_ort_l, diff_ort_u, cost\t')
             #f.write( str((diff_emg_l, diff_emg_u, diff_ort_l, diff_ort_u, cost))+'\t' )
