@@ -10,6 +10,7 @@ import tf
 from math import pi
 
 # These numbers are from experiments
+# It would be better to adjust them for each user
 EMG_MAX = 585.0
 EMG_MIN = 32.0
 GYRO_MAX = 500.0
@@ -45,7 +46,6 @@ def normalize_myo(data, update_extremes=False):
     QUAT = data[:,-4:]
     ACC = data[:,9:12]
     GYRO = data[:,12:15]
-#    EUL = data[:,15:18]
     if update_extremes:
         EMG_max = np.max(EMG)
         EMG_min = np.min(EMG)
@@ -60,19 +60,9 @@ def normalize_myo(data, update_extremes=False):
     
     # Descritize gyroscope data
     GYRO = process_gyro(GYRO, GYRO_max, False)
-   
-    
-    #baseRot = EUL[0, 0]*pi/180 # used for calibration
-    #===========================================================================
-    # QUAT = np.zeros((EUL.shape[0], 4))
-    # for i, euler in enumerate(EUL):
-    #     euler = euler*pi/180
-    #     QUAT[i] = tf.transformations.quaternion_from_euler(-euler[2], euler[1], -euler[0] + baseRot)
-    #===========================================================================
 
     Data = np.hstack((T,EMG,ACC,GYRO,QUAT))
-#    Data = np.hstack((T, EMG, ORI))
-    return [Data, EMG_max, EMG_min, GYRO_max] 
+    return [Data, EMG_max, EMG_min, GYRO_max]
 
 def preprocess(dataPath, update_extremes=False, identifier=''):
     if identifier:
@@ -84,7 +74,6 @@ def preprocess(dataPath, update_extremes=False, identifier=''):
     ORI = np.genfromtxt(os.path.join(dataPath,'orientation'+identifier+'.mat'), delimiter=',')
     IMU = np.hstack((ACC, GYRO, ORI))
     STATES = np.genfromtxt(os.path.join(dataPath,'states.dat'), dtype=int)
-    #IMU = ORI
 
     # Down sample, from 50 Hz to 10 Hz
     # remove end points
@@ -115,7 +104,6 @@ def preprocess(dataPath, update_extremes=False, identifier=''):
     EMG_smooth = savgol_filter(EMG, 31, 3, axis=0)
     Data = np.hstack((Time, EMG_smooth, IMU))
     
-    #baseRot = get_base('../../data/work/0/')
     processed = normalize_myo(Data, update_extremes);
     processed.append(STATES)
     return processed

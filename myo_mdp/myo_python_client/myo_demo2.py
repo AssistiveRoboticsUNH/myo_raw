@@ -47,6 +47,7 @@ class MyoDemo2(object):
             for q in orientation_u:
                 self.quat_u.append(Quaternion(x=q[0], y=q[1], z=q[2], w=q[3]))
         
+        # Special cooridinates to tell android program publishcation is done
         self.quat_l.append(Quaternion(x=-1337, y=-1337, z=-1337, w=-1337))
         self.quat_u.append(Quaternion(x=-1337, y=-1337, z=-1337, w=-1337))
         print "demonstration loaded!"

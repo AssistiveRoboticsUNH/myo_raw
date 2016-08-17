@@ -10,21 +10,15 @@ from std_msgs.msg import String, Float64, Empty
 from geometry_msgs.msg import Quaternion
 from myo_raw.msg import IMUData, EMGIMU
 import numpy as np
-import tf
 from myo_demo2 import MyoDemo2
 import time
 import preprocess
 from align_signal import dtw_distance, align_signal
 from scipy.signal import savgol_filter # need scipy version 0.16
-#from prompt2 import evaluate
-import threading
 import sys
 import math
 from collections import defaultdict
-import matplotlib.pyplot as plt
-#from logger import MyLogger
 import datetime
-import json
 
 
 TIME_WEIGHT = 0.05
@@ -150,7 +144,6 @@ class Progress(object):
         self.pub = rospy.Publisher('/exercise/progress', Float64, queue_size=10)
         self.pub1 = rospy.Publisher('/exercise/state', String, queue_size=10)
         try:
-            #threading.Thread(target=self.activatePrompt).start()
             self.activatePrompt()
         except:
             print "Could not start thread. ", sys.exc_info()[0]
@@ -213,12 +206,7 @@ class Progress(object):
         rospy.Subscriber('/myo/l/emgimu', EMGIMU, self.updateLower, queue_size=1)
         rospy.Subscriber('/myo/u/emgimu', EMGIMU, self.callback, queue_size=1)
         rospy.Subscriber('/exercise/detected_state', String, self.speech_handler, queue_size=1)
-    
 
-#    def subscribeTrigger(self):
-#        rospy.Subscriber('/exercise/playback_trigger', Empty, self.starter)
-#        print "listening to trigger"
-    
     def getPosition(self, state):
         next_state = self.myo_state.next_step(self.state_history)
         if next_state == END:
@@ -233,7 +221,7 @@ class Progress(object):
         return position
 
     def getProgress(self, emgimu_l, emgimu_u):
-        #print "Tracking your progress now..."
+        """Tracking the progress"""
 
         emg_l = preprocess.process_emg(np.array(emgimu_l.emg), self.EMG_MAX, self.EMG_MIN)
         acc_l = np.array(emgimu_l.linear_acceleration)
@@ -247,27 +235,18 @@ class Progress(object):
         
         signal_array = np.hstack((EMG_WEIGHT*emg_l, acc_l, gyro_l, orie_l, EMG_WEIGHT*emg_u, acc_u, gyro_u, orie_u))
         self.history.append(signal_array)
-        # print "# data points saved: ", len(self.history)
         if len(self.previous)>10: # 0.2 seconds
             self.previous.pop(0)
         self.previous.append(signal_array)
         current_signal = np.mean(self.previous, axis=0)
 
-        #state = 's'+str(int(self.classifier.predict(current_signal)[0]))
-        # current_orie = np.append(current_signal[18:22], current_signal[-4:])
-        # state = int(self.classifier.predict(current_orie)[0]) # detect critical points
+        # "state" here means a critical point, the output of the signal classifer
         state = int(self.classifier.predict(current_signal)[0])
         self.state_tracer.append(state)
-        #print "state tracer: ", self.state_tracer
         self.pub1.publish(str(state))
-        #self.pub.publish(self.progress)
 
         if len(self.state_tracer) < 5:
             return
-        # print self.task
-        # if self.task == []: #or (len(self.task)==1 and self.full_task[-1] not in self.task):
-        #     print "Task completed! Say 'stop' to end program."
-        #     #self.end_game()
 
         if state != -1 and state == self.state_tracer[-2] and state == self.state_tracer[-3]:
             if not self.state_history:
@@ -278,12 +257,9 @@ class Progress(object):
 
             self.current_segment.append(len(self.history))
             self.progress = self.getPosition(state) * 1.0 / (self.n_states - 1)
-            #print "progress: ", self.progress
 
-            # print "current state", state, state_map[state]
             if state in self.task:
                 self.task.remove(state)
-                #self.progress = 1 - 1.0*len(self.task)/(self.n_states-1)
             if state != self.recent_state:
                 self.delay = 0
             self.recent_state = state
@@ -299,7 +275,6 @@ class Progress(object):
         self.prompt_now = True
 
         if self.progress >= 0 and self.progress < 1:
-            #self.prompt.callback(self.progress, self.progress + 1.0 / (self.n_states - 1))
             self.prompt.callback(self.progress)
         elif self.progress == 1:
             print "No need to prompot"
@@ -314,7 +289,6 @@ class Progress(object):
         self.finished = True
         with open(self.logfile, 'a') as f:
             f.write('{:%Y-%m-%d %H:%M:%S} task completed. '.format(datetime.datetime.now()))
-        #self.pub.publish(1.0)
         try:
             self.evaluate_pfmce()
         except IndexError:
@@ -334,12 +308,6 @@ class Progress(object):
 
     def evaluate_pfmce(self, evaluate_emg=True):
         print "Evaluating performance...."
-        # if not self.mdp:
-        #     print "No MDP found"
-        #     self.history = []
-        #     return
-
-        #action_classifier = pickle.load(open('../data/action_classifier.pkl'))
         history = np.array(self.history)
         print "raw history shape:", history.shape
         #history = history[25:-6:5, :] # downsampling, cut the first half second
@@ -355,12 +323,6 @@ class Progress(object):
         emg_u = history[:,18:26] / EMG_WEIGHT
         ort_l = history[:,14:18]
         ort_u = history[:,-4:]
-
-        # plt.figure()
-        # plt.plot(evaluator.ort_l)
-        # plt.figure()
-        # plt.plot(align_signal(evaluator.ort_l, ort_l, has_time=False))
-        # plt.show(block=True)
 
         (diff_emg_l, cost) = dtw_distance(evaluator.emg_l, emg_l)
         (diff_emg_u, _) = dtw_distance(evaluator.emg_u, emg_u)
@@ -381,17 +343,9 @@ class Progress(object):
         performance = 100 * math.exp(-EMG_FACTOR*(diff_emg_l+diff_emg_u) \
                                      - ORT_FACTOR*(diff_ort_l+diff_ort_u) \
                                      - TIME_FACTOR*cost) - 8*self.n_prompts
-        #self.logger.info('performance score %f' %performance)
         print performance
         with open(self.logfile, 'a') as f:
-            #f.write('diff_emg_l, diff_emg_u, diff_ort_l, diff_ort_u, cost\t')
-            #f.write( str((diff_emg_l, diff_emg_u, diff_ort_l, diff_ort_u, cost))+'\t' )
             f.write('performance score: %f\n' %performance)
-
-        # with open('../log/{:%Y-%m-%d %H:%M:%S} task'.format(datetime.datetime.now())+str(self.task_type)+'.pkl', 'a') as f:
-        #     pickle.dump(preprocess.restore_emg(emg_l,self.EMG_MAX, self.EMG_MIN), f)
-        #     pickle.dump(preprocess.restore_emg(emg_u,self.EMG_MAX, self.EMG_MIN), f)
-
 
 if __name__ == '__main__':
     progress = Progress(give_prompt=True)

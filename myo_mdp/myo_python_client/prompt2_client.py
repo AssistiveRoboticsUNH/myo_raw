@@ -5,22 +5,10 @@ Created on Mar 24, 2016
 
 @author: ymeng
 '''
-import matplotlib.pyplot as plt
-from preprocess import preprocess
-import classifier
 import myo_state2
 from myo_demo2 import MyoDemo2
-from build_mdp import BuildMDP
 import cPickle as pickle
-import argparse
-import os
-import sys
-import numpy as np
-from align_signal import align_signal
-import subprocess
-import glob
 import time
-from collections import defaultdict
 from geometry_msgs.msg import Quaternion
 from std_msgs.msg import Header, Int32, String
 import rospy
@@ -38,17 +26,6 @@ def signal_handler(msg):
 
     global progress, task, demo, n_repeats
 
-#    if msg.data != 1 and progress is not None:
-#        progress.reset()
-
-#    if msg.data == 0:
-#        # There is intentional repetition of this line in both conidition statements rather than
-#        # at the top of the routine because msg.data is not always 0 or 1
-#        gather_samples_and_build() 
-#        demo = myo_state2.MyoPrompt2()
-#        time.sleep(.5)
-#        demo.callback(0, 1)
-        
     if msg.data in (10, 20, 30):
         task_type = msg.data/10
         if progress and not progress.finished:
@@ -94,6 +71,7 @@ def signal_handler(msg):
     elif msg.data == -2:
         # skip demonstration
         if demo is not None:
+            print "skipping demo..."
             demo.skip = True
         
 def speech_handler(msg):
@@ -113,7 +91,7 @@ if __name__ == '__main__':
     
     print "Running client mode..."
     rospy.init_node('client_trial')
-    rospy.Subscriber('/exercise/mode', Int32, signal_handler)
+    rospy.Subscriber('/exercise/mode', Int32, signal_handler, queue_size=2)
     rospy.Subscriber('/recognizer/output', String, speech_handler, queue_size=1)
     
     start_myo_pub = rospy.Publisher('/myo/launch', Int32, queue_size=1)

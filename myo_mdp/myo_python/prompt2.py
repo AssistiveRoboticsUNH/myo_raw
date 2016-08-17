@@ -14,37 +14,21 @@ from build_mdp import BuildMDP
 import cPickle as pickle
 import argparse
 import os
-import sys
 import numpy as np
 from align_signal import align_signal
 import subprocess
 import glob
 import time
-from collections import defaultdict
 from geometry_msgs.msg import Quaternion
-from shutil import copyfile
 from logger import MyLogger
 
 
-TIME_WEIGHT = 0.05
+TIME_WEIGHT = 0.05 # weight of temporal coordinates in classification
 EMG_WEIGHT = 1
 logger = MyLogger().logger
-# def evaluate(emg_labels, state_labels, mdp_builder):
-#     """Baseline of performance
-#     """
-#     total_reward = 0
-#     N = len(emg_labels)
-#     print "Number of points: ", N
-#     for i in range(N-1):
-#         s = state_labels[i]
-#         a = emg_labels[i]
-#         s_next = state_labels[i+1]
-#         total_reward += mdp_builder.getReward(a, s, s_next)
-#
-#     return total_reward
 
 
-def build_classifier(samples=1, nClusters=None, ID='user', used=False):
+def build_classifier(samples=1, nClusters=None, ID='user', used=False, has_matlab=False):
     if used:
         mdp = pickle.load(open('../data/mdp.pkl'))
         args = {"give_prompt": True,
@@ -55,9 +39,9 @@ def build_classifier(samples=1, nClusters=None, ID='user', used=False):
         progress = myo_state2.Progress(classifier_pkl='../data/state_classifier.pkl', **args)
         return
     
-    #has_matlab = os.path.exists('/usr/local/MATLAB')
-    has_matlab = False
-    
+    if has_matlab is None:
+        has_matlab = os.path.exists('/usr/local/MATLAB')
+
     for identifier in ('l', 'u'):
         for i in range(samples):
             data_i, EMG_max_i, EMG_min_i, GYRO_max_i, states_i = preprocess(os.path.join('../../data/work/', str(i)), update_extremes=True, identifier=identifier)
@@ -96,15 +80,6 @@ def build_classifier(samples=1, nClusters=None, ID='user', used=False):
 
                 emg_data_a = np.vstack( (emg_data_a, np.hstack((Time_a, emg_i_a))) )
             
-#            # Use original data to train state classifier
-#            # aligned data is only used for expected trajectory
-#            Time = np.arange(emg_i.shape[0]).reshape((emg_i.shape[0],1))
-#            emg_data.append(np.hstack((Time, emg_i)))
-#            
-#            Time = np.arange(imu_i.shape[0]).reshape((imu_i.shape[0],1))
-#            imu_data.append(np.hstack((Time, imu_i)))
-            
-        
         n = len(imu_demos)
         
         # get average
@@ -162,7 +137,6 @@ def build_classifier(samples=1, nClusters=None, ID='user', used=False):
         ## use the following if there is Malab under /usr/local
         ## GMM and GMR will be performed
         os.chdir('../matlab')
-        #subprocess.call(['matlab', '-nodisplay', '-nojvm', '-nosplash', '-r', 'demo('+str(samples)+');exit'])
         np.savetxt('ort_data_u', ort_data_u, delimiter=',')
         np.savetxt('ort_data_l', ort_data_l, delimiter=',')
         np.savetxt('emg_data_u', emg_data_u_timed, delimiter=',')
@@ -182,13 +156,6 @@ def build_classifier(samples=1, nClusters=None, ID='user', used=False):
     emg_cluster = classifier.SignalCluster(emg_demos, n_clusters=8)
     
     observations = np.hstack((EMG_WEIGHT*emg_demos_l, imu_demos_l, EMG_WEIGHT*emg_demos_u, imu_demos_u))
-    # observations = np.hstack((imu_demos_l[:, -4:], imu_demos_u[:, -4:]))
-
-#    timed_observations = np.hstack((TIME_WEIGHT*Time, EMG_WEIGHT*emg_demos_l, imu_demos_l, EMG_WEIGHT*emg_demos_u, imu_demos_u))
-
-    #
-    # print "state labels", state_labels
-    # observations = np.hstack((EMG_WEIGHT*emg_data_l[0:n_points, :], imu_data_l[0:n_points, :], EMG_WEIGHT*emg_data_u[0:n_points, :], imu_data_u[0:n_points, :]))
 
     if nClusters is None:
         N = max(state_labels)  # number of tagged points
@@ -208,16 +175,15 @@ def build_classifier(samples=1, nClusters=None, ID='user', used=False):
     else:
         state_cluster = classifier.SignalCluster(observations, nClusters)
 
-    # state_labels[state_labels>=0] = state_cluster.labels
-    # statesData = state_labels[0:len(emg_demos)]
-    # valid_states = statesData >= 0
-
     plt.figure()
     plt.plot(show_ort_l)
     #plt.plot(emg_demos_u)
     plt.plot(state_cluster.labels, '*')
     plt.show(block=True)
 
+    ## Currently we implement the n-gram model without explicitly training the MDP
+    ## So the following code is not used
+    ## ============================================================================
     ## build mdp
     #
     # indexes = [x for x,item in enumerate(valid_states) if item] # critical points
@@ -240,13 +206,14 @@ def build_classifier(samples=1, nClusters=None, ID='user', used=False):
     # print "policy", builder.Pi
 
     #print "expected actions: ", actionsData
+    ## ==============================================================================
+
     print "expected states: ", state_cluster.labels
 
     #baseline = evaluate(actionsData, statesData, builder)
     #print "baseline performance: ", baseline
 
     state_classifier = classifier.SignalClassifier(n_neighbors=5)
-    #state_classifier.train(observations, state_labels, trainingFile=None)
     state_classifier.train(observations, state_cluster.labels, trainingFile=None)
     baseline = None
     pickle.dump((state_classifier, EMG_MAX, EMG_MIN, GYRO_MAX, baseline), open('../data/state_classifier.pkl', 'wb'))
@@ -314,15 +281,10 @@ def signal_handler(msg):
             is_running = True
         else:
             if is_running:
-                #progress.end_game()
                 progress.reset()
 
             progress = myo_state2.Progress(classifier_pkl='../data/state_classifier.pkl', **args)
             is_running = True
-            #progress.reset()
-            #progress.subscribeIMU()
-
-        # progress = myo_state2.Progress(classifier_pkl='../data/state_classifier.pkl', **args)
 
 if __name__ == '__main__':
     import rospy
