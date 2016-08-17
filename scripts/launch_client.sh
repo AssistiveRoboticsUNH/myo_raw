@@ -7,7 +7,6 @@ IP=`ifconfig wlan2 2>/dev/null|awk '/inet addr:/ {print $2}'|sed 's/addr://'`
 export ROS_HOSTNAME=$IP
 export ROS_MASTER_URI=http://$IP:11311
 
-
 [[ ":$PYTHONPATH:" != *"threespace"* ]] && export PYTHONPATH="${PYTHONPATH}:~/myocp/myo/src/threespace/threespace"
 
 #PID=`ps aux | grep '[r]ecognizer.py'`

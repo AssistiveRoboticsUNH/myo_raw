@@ -248,6 +248,6 @@ if __name__ == '__main__':
         rospy.Subscriber('/myo/l/ort', Quaternion, main)
         rospy.spin()
     else:
-	print "myo only mode: ", 'myo-only' in sys.argv 
+        print "myo only mode: ", 'myo-only' in sys.argv
         main(None)
 
