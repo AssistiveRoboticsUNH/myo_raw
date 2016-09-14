@@ -20,12 +20,12 @@ import subprocess
 import glob
 import time
 from geometry_msgs.msg import Quaternion
-from logger import MyLogger
+#from logger import MyLogger
 
 
 TIME_WEIGHT = 0.05 # weight of temporal coordinates in classification
 EMG_WEIGHT = 1
-logger = MyLogger().logger
+#logger = MyLogger().logger
 
 
 def build_classifier(samples=1, nClusters=None, ID='user', used=False, has_matlab=False):
@@ -248,7 +248,7 @@ progress = None
 is_running = False
 
 def signal_handler(msg):
-    logger.info('signal received...')
+    #logger.info('signal received...')
     print "signal received", msg
 
     global progress
@@ -290,11 +290,11 @@ if __name__ == '__main__':
     import rospy
     from std_msgs.msg import Int32, Empty
 
-    logger.info('Classifier launched. Listening to message...')
+    #logger.info('Classifier launched. Listening to message...')
 
     print "Running developer mode..."
     rospy.init_node('build_classifier')
-    logger.info('after node...')
+    #logger.info('after node...')
     rospy.Subscriber('/exercise/mode', Int32, signal_handler)
 
     MyoDemo2.pub_l = rospy.Publisher('/exercise/l/playback', Quaternion, queue_size=1)
