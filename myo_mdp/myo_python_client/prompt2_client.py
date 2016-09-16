@@ -38,7 +38,8 @@ def signal_handler(msg):
             time.sleep(.5)
             demo.callback(0, 1)
             
-            mdp = pickle.load(open('../data'+str(task_type)+'/mdp.pkl'))
+            #mdp = pickle.load(open('../data'+str(task_type)+'/mdp.pkl'))
+            mdp = 'dummy'
             args = {"give_prompt": True,
                     "mdp": mdp,
                     "id": "new patient",
