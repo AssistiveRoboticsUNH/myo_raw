@@ -77,6 +77,8 @@ def preprocess(dataPath, update_extremes=False, identifier=''):
 
     # Down sample, from 50 Hz to 10 Hz
     # remove end points
+    print EMG
+    print IMU
     EMG = EMG[16:-16:5, :]
     IMU = IMU[16:-16:5, :]
     STATES = STATES[16:-16:5]
