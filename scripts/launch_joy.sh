@@ -10,6 +10,9 @@ export ROS_MASTER_URI=http://$IP:11311
 #export ROS_MASTER_URI=http://localhost:11311
 echo $ROS_MASTER_URI
 
+#export ROS_HOSTNAME=localhost
+#export ROS_MASTER_URI=http://localhost:11311
+
 [[ ":$PYTHONPATH:" != *"threespace"* ]] && export PYTHONPATH="${PYTHONPATH}:~/myocp/myo/src/threespace/threespace"
 
 #PID=`ps aux | grep '[r]ecognizer.py'`
@@ -18,7 +21,6 @@ echo $ROS_MASTER_URI
 #  kill -9 $PID
 #fi
 
-#source ~/myocp/myo/devel/setup.bash
 source ~/ros_ws/devel/setup.bash
 
 NODE=`rosnode list | grep record`
@@ -29,7 +31,7 @@ fi
 
 mkdir -p user_data
 
-roslaunch exercise_interface_client interface_client.launch
+roslaunch exercise_interface interface_joy.launch
 
 rosnode kill -a
 ps -aux |grep gnome-terminal | awk '{print $2}' | xargs kill

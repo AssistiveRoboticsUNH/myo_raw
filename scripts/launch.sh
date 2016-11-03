@@ -1,18 +1,19 @@
 #!/bin/bash
-source ~/.bashrc
+
 chmod 777 /dev/ttyACM*
 
-#IP=`ifconfig wlan2 2>/dev/null|awk '/inet addr:/ {print $2}'|sed 's/addr://'`
+IP=`ifconfig wlan0 2>/dev/null|awk '/inet addr:/ {print $2}'|sed 's/addr://'`
 
-#export ROS_HOSTNAME=$IP
-#export ROS_MASTER_URI=http://$IP:11311
+export ROS_HOSTNAME=$IP
+#export ROS_HOSTNAME=localhost
+export ROS_MASTER_URI=http://$IP:11311
+#export ROS_MASTER_URI=http://localhost:11311
+echo $ROS_MASTER_URI
 
-export ROS_HOSTNAME=localhost
-export ROS_MASTER_URI=http://localhost:11311
+#export ROS_HOSTNAME=localhost
+#export ROS_MASTER_URI=http://localhost:11311
 
-#[[ ":$PYTHONPATH:" != *"threespace"* ]] && export PYTHONPATH="${PYTHONPATH}:~/myocp/myo/src/threespace/threespace"
-#[[ ":$PYTHONPATH:" != *"threespace"* ]] && export PYTHONPATH="${PYTHONPATH}:~/myocp/myo/src/threespace/threespace"
-
+[[ ":$PYTHONPATH:" != *"threespace"* ]] && export PYTHONPATH="${PYTHONPATH}:~/myocp/myo/src/threespace/threespace"
 
 #PID=`ps aux | grep '[r]ecognizer.py'`
 #if [[ "" !=  "$PID" ]]; then

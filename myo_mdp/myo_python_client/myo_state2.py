@@ -119,12 +119,12 @@ def evaluate(emg_labels, state_labels, mdp_builder):
 
 
 class Evaluator(object):
-    def __init__(self):
-        self.segments = pickle.load(open('../data/segments.dat'))
-        self.emg_u = np.genfromtxt('../data/emg_u.dat', delimiter=',')
-        self.emg_l = np.genfromtxt('../data/emg_l.dat', delimiter=',')
-        self.ort_u = np.genfromtxt('../data/demo_u.dat', delimiter=',')
-        self.ort_l = np.genfromtxt('../data/demo_l.dat', delimiter=',')
+    def __init__(self, task_type):
+        # self.segments = pickle.load(open('../data/segments.dat'))
+        self.emg_u = np.genfromtxt('../data'+str(task_type)+'/emg_u.dat', delimiter=',')
+        self.emg_l = np.genfromtxt('../data'+str(task_type)+'/emg_l.dat', delimiter=',')
+        self.ort_u = np.genfromtxt('../data'+str(task_type)+'/demo_u.dat', delimiter=',')
+        self.ort_l = np.genfromtxt('../data'+str(task_type)+'/demo_l.dat', delimiter=',')
 
 class Progress(object):
     
@@ -154,7 +154,7 @@ class Progress(object):
         except:
             print "Could not start thread. ", sys.exc_info()[0]
             sys.exit(1)
-        with open(self.logfile, 'a') as f:
+        with open(self.logfile, 'ab+') as f:
             f.write('\n{:%Y-%m-%d %H:%M:%S} task started.\n'.format(datetime.datetime.now()))
             f.write('task type: %s\n' %self.task_type)
         self.finished = False
@@ -176,7 +176,7 @@ class Progress(object):
         self.prompt_now = False
         self.previous = []
         #self.prompt = None
-        with open(self.logfile, 'a') as f:
+        with open(self.logfile, 'ab+') as f:
             f.write('\n{:%Y-%m-%d %H:%M:%S} task reset.\n'.format(datetime.datetime.now()))
 
     def activatePrompt(self):
@@ -327,7 +327,7 @@ class Progress(object):
 
         np.savetxt('user_data/' + self.user_id, history, delimiter=',')
 
-        evaluator = Evaluator()
+        evaluator = Evaluator(self.task_type)
         emg_l = history[:,0:8] / EMG_WEIGHT
         emg_u = history[:,18:26] / EMG_WEIGHT
         ort_l = history[:,14:18]
