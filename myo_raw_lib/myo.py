@@ -96,6 +96,39 @@ class Myo(MyoRaw):
         for h in self.pose_handlers:
             h(pose)
 
+class SimpleMyo(MyoRaw):
+    HIST_LEN = 25
+    print("Creating a simple myo node")
+    def __init__(self, tty=None, cls=None):
+        MyoRaw.__init__(self, tty)
+        self.cls = cls
+        self.history = deque([0] * Myo.HIST_LEN, Myo.HIST_LEN)
+        self.history_cnt = Counter(self.history)
+        self.add_emg_handler(self.emg_handler)
+        self.last_pose = None
+
+        self.pose_handlers = []
+
+    def emg_handler(self, emg, moving):
+        # y = self.cls.classify(emg)
+        y = 0
+        # print(emg)
+        self.history_cnt[self.history[0]] -= 1
+        self.history_cnt[y] += 1
+        self.history.append(y)
+
+        r, n = self.history_cnt.most_common(1)[0]
+        if self.last_pose is None or (n > self.history_cnt[self.last_pose] + 5 and n > Myo.HIST_LEN / 2):
+            self.on_raw_pose(r)
+            self.last_pose = r
+
+    def add_raw_pose_handler(self, h):
+        self.pose_handlers.append(h)
+
+    def on_raw_pose(self, pose):
+        for h in self.pose_handlers:
+            h(pose)
+
 if __name__ == '__main__':
     import subprocess
     m = Myo(NNClassifier(), sys.argv[1] if len(sys.argv) >= 2 else None)
